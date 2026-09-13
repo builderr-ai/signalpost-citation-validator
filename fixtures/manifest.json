@@ -1,0 +1,257 @@
+{
+  "fixture_pack": "signalpost_public_citation_v1_acceptance",
+  "schema_version": 1,
+  "snapshot_sha256": {
+    "snapshots/source-a.txt": "12ec35e8c6727043c5ce74de0591864abfaa717081059b160da78d3be9e880cc",
+    "snapshots/source-values.txt": "48ed71d4f5d96bbc48e1d6d3ae17d1fd6397dc383524c623f03112e365c64265"
+  },
+  "required_cases": [
+    "valid_claim",
+    "valid_zero_false_empty_list",
+    "missing_citation",
+    "unknown_evidence_id",
+    "duplicate_evidence_ids",
+    "bad_url_timestamp_digest",
+    "path_escape",
+    "hash_mismatch",
+    "empty_input"
+  ],
+  "cases": [
+    {
+      "id": "valid_claim",
+      "envelope": {
+        "organisation_number": "000000001",
+        "claims": [
+          {
+            "field": "synthetic_label",
+            "value": "alpha",
+            "availability": "available",
+            "evidence_ids": ["ev-a"]
+          }
+        ],
+        "evidence": [
+          {
+            "id": "ev-a",
+            "source_url": "https://example.org/source-a",
+            "retrieved_at": "2026-09-12T10:30:00Z",
+            "content_sha256": "12ec35e8c6727043c5ce74de0591864abfaa717081059b160da78d3be9e880cc",
+            "snapshot_path": "snapshots/source-a.txt"
+          }
+        ]
+      },
+      "expected": {
+        "valid": true,
+        "envelopes_checked": 1,
+        "citations_checked": 1,
+        "finding_codes": []
+      }
+    },
+    {
+      "id": "valid_zero_false_empty_list",
+      "envelope": {
+        "organisation_number": "000000002",
+        "claims": [
+          {
+            "field": "synthetic_count",
+            "value": 0,
+            "availability": "available",
+            "evidence_ids": ["ev-values"]
+          },
+          {
+            "field": "synthetic_flag",
+            "value": false,
+            "availability": "available",
+            "evidence_ids": ["ev-values"]
+          },
+          {
+            "field": "synthetic_items",
+            "value": [],
+            "availability": "available",
+            "evidence_ids": ["ev-values"]
+          },
+          {
+            "field": "synthetic_unavailable",
+            "value": null,
+            "availability": "not_available",
+            "evidence_ids": []
+          }
+        ],
+        "evidence": [
+          {
+            "id": "ev-values",
+            "source_url": "https://example.net/source-values",
+            "retrieved_at": "2026-09-12T12:30:00+02:00",
+            "content_sha256": "48ed71d4f5d96bbc48e1d6d3ae17d1fd6397dc383524c623f03112e365c64265",
+            "snapshot_path": "snapshots/source-values.txt"
+          }
+        ]
+      },
+      "expected": {
+        "valid": true,
+        "envelopes_checked": 1,
+        "citations_checked": 1,
+        "finding_codes": []
+      }
+    },
+    {
+      "id": "missing_citation",
+      "envelope": {
+        "organisation_number": "000000003",
+        "claims": [
+          {
+            "field": "synthetic_label",
+            "value": "alpha",
+            "availability": "available",
+            "evidence_ids": []
+          }
+        ],
+        "evidence": []
+      },
+      "expected": {
+        "valid": false,
+        "envelopes_checked": 1,
+        "citations_checked": 0,
+        "finding_codes": ["available_claim_has_no_evidence"]
+      }
+    },
+    {
+      "id": "unknown_evidence_id",
+      "envelope": {
+        "organisation_number": "000000004",
+        "claims": [
+          {
+            "field": "synthetic_label",
+            "value": "alpha",
+            "availability": "available",
+            "evidence_ids": ["ev-unknown"]
+          }
+        ],
+        "evidence": []
+      },
+      "expected": {
+        "valid": false,
+        "envelopes_checked": 1,
+        "citations_checked": 1,
+        "finding_codes": ["missing_evidence_record"]
+      }
+    },
+    {
+      "id": "duplicate_evidence_ids",
+      "envelope": {
+        "organisation_number": "000000005",
+        "claims": [],
+        "evidence": [
+          {"id": "ev-duplicate"},
+          {"id": "ev-duplicate"}
+        ]
+      },
+      "expected": {
+        "valid": false,
+        "envelopes_checked": 1,
+        "citations_checked": 0,
+        "finding_codes": ["duplicate_evidence_id"]
+      }
+    },
+    {
+      "id": "bad_url_timestamp_digest",
+      "envelope": {
+        "organisation_number": "000000006",
+        "claims": [
+          {
+            "field": "synthetic_label",
+            "value": "alpha",
+            "availability": "available",
+            "evidence_ids": ["ev-bad-metadata"]
+          }
+        ],
+        "evidence": [
+          {
+            "id": "ev-bad-metadata",
+            "source_url": "file:///synthetic/source-a.txt",
+            "retrieved_at": "2026-09-12T10:30:00",
+            "content_sha256": "not-a-sha256",
+            "snapshot_path": "snapshots/source-a.txt"
+          }
+        ]
+      },
+      "expected": {
+        "valid": false,
+        "envelopes_checked": 1,
+        "citations_checked": 1,
+        "finding_codes": [
+          "invalid_content_sha256",
+          "invalid_source_url",
+          "retrieved_at_requires_timezone"
+        ]
+      }
+    },
+    {
+      "id": "path_escape",
+      "envelope": {
+        "organisation_number": "000000007",
+        "claims": [
+          {
+            "field": "synthetic_label",
+            "value": "alpha",
+            "availability": "available",
+            "evidence_ids": ["ev-escape"]
+          }
+        ],
+        "evidence": [
+          {
+            "id": "ev-escape",
+            "source_url": "https://example.org/escape",
+            "retrieved_at": "2026-09-12T10:30:00Z",
+            "content_sha256": "12ec35e8c6727043c5ce74de0591864abfaa717081059b160da78d3be9e880cc",
+            "snapshot_path": "../outside.txt"
+          }
+        ]
+      },
+      "expected": {
+        "valid": false,
+        "envelopes_checked": 1,
+        "citations_checked": 1,
+        "finding_codes": ["snapshot_outside_root"]
+      }
+    },
+    {
+      "id": "hash_mismatch",
+      "envelope": {
+        "organisation_number": "000000008",
+        "claims": [
+          {
+            "field": "synthetic_label",
+            "value": "alpha",
+            "availability": "available",
+            "evidence_ids": ["ev-a"]
+          }
+        ],
+        "evidence": [
+          {
+            "id": "ev-a",
+            "source_url": "https://example.org/source-a",
+            "retrieved_at": "2026-09-12T10:30:00Z",
+            "content_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+            "snapshot_path": "snapshots/source-a.txt"
+          }
+        ]
+      },
+      "expected": {
+        "valid": false,
+        "envelopes_checked": 1,
+        "citations_checked": 1,
+        "finding_codes": ["snapshot_hash_mismatch"]
+      }
+    },
+    {
+      "id": "empty_input",
+      "envelope": null,
+      "expected": {
+        "valid": false,
+        "envelopes_checked": 0,
+        "citations_checked": 0,
+        "finding_codes": ["empty_input"]
+      }
+    }
+  ]
+}
