@@ -21,13 +21,8 @@ class FixturePackTest(unittest.TestCase):
         manifest = VERIFY.load_manifest()
         for case in manifest["cases"]:
             expected = case["expected"]
-            findings = [
-                {
-                    "line": 1 if case["id"] != "empty_input" else 0,
-                    "code": code,
-                }
-                for code in expected["finding_codes"]
-            ]
+            findings = [{**finding, "message": "Synthetic finding"}
+                        for finding in expected["findings"]]
             report = {
                 "validator": "signalpost_public_citation_v1",
                 "valid": expected["valid"],
@@ -52,9 +47,26 @@ class FixturePackTest(unittest.TestCase):
             "factual_support_verified": False,
             "entity_binding_verified": False,
             "findings": [
-                {"line": 1, "claim_index": 0, "evidence_id": "ev-bad-metadata", "code": code}
-                for code in reversed(case["expected"]["finding_codes"])
+                {**finding, "message": "Synthetic finding"}
+                for finding in reversed(case["expected"]["findings"])
             ],
+        }
+        with self.assertRaises(VERIFY.AcceptanceFailure):
+            VERIFY.check_report(case, report)
+
+    def test_partial_finding_shape_is_rejected(self):
+        case = next(
+            item for item in VERIFY.load_manifest()["cases"]
+            if item["id"] == "missing_citation"
+        )
+        report = {
+            "validator": "signalpost_public_citation_v1",
+            "valid": False,
+            "envelopes_checked": 1,
+            "citations_checked": 0,
+            "factual_support_verified": False,
+            "entity_binding_verified": False,
+            "findings": [{"line": 1, "code": "available_claim_has_no_evidence"}],
         }
         with self.assertRaises(VERIFY.AcceptanceFailure):
             VERIFY.check_report(case, report)

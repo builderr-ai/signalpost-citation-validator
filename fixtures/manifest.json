@@ -1,6 +1,6 @@
 {
   "fixture_pack": "signalpost_public_citation_v1_acceptance",
-  "schema_version": 1,
+  "schema_version": 2,
   "snapshot_sha256": {
     "snapshots/source-a.txt": "12ec35e8c6727043c5ce74de0591864abfaa717081059b160da78d3be9e880cc",
     "snapshots/source-values.txt": "48ed71d4f5d96bbc48e1d6d3ae17d1fd6397dc383524c623f03112e365c64265"
@@ -26,7 +26,9 @@
             "field": "synthetic_label",
             "value": "alpha",
             "availability": "available",
-            "evidence_ids": ["ev-a"]
+            "evidence_ids": [
+              "ev-a"
+            ]
           }
         ],
         "evidence": [
@@ -43,7 +45,7 @@
         "valid": true,
         "envelopes_checked": 1,
         "citations_checked": 1,
-        "finding_codes": []
+        "findings": []
       }
     },
     {
@@ -55,19 +57,25 @@
             "field": "synthetic_count",
             "value": 0,
             "availability": "available",
-            "evidence_ids": ["ev-values"]
+            "evidence_ids": [
+              "ev-values"
+            ]
           },
           {
             "field": "synthetic_flag",
             "value": false,
             "availability": "available",
-            "evidence_ids": ["ev-values"]
+            "evidence_ids": [
+              "ev-values"
+            ]
           },
           {
             "field": "synthetic_items",
             "value": [],
             "availability": "available",
-            "evidence_ids": ["ev-values"]
+            "evidence_ids": [
+              "ev-values"
+            ]
           },
           {
             "field": "synthetic_unavailable",
@@ -90,7 +98,7 @@
         "valid": true,
         "envelopes_checked": 1,
         "citations_checked": 1,
-        "finding_codes": []
+        "findings": []
       }
     },
     {
@@ -111,7 +119,15 @@
         "valid": false,
         "envelopes_checked": 1,
         "citations_checked": 0,
-        "finding_codes": ["available_claim_has_no_evidence"]
+        "findings": [
+          {
+            "line": 1,
+            "organisation_number": "000000003",
+            "claim_index": 0,
+            "evidence_id": null,
+            "code": "available_claim_has_no_evidence"
+          }
+        ]
       }
     },
     {
@@ -123,7 +139,9 @@
             "field": "synthetic_label",
             "value": "alpha",
             "availability": "available",
-            "evidence_ids": ["ev-unknown"]
+            "evidence_ids": [
+              "ev-unknown"
+            ]
           }
         ],
         "evidence": []
@@ -132,7 +150,15 @@
         "valid": false,
         "envelopes_checked": 1,
         "citations_checked": 1,
-        "finding_codes": ["missing_evidence_record"]
+        "findings": [
+          {
+            "line": 1,
+            "organisation_number": "000000004",
+            "claim_index": 0,
+            "evidence_id": "ev-unknown",
+            "code": "missing_evidence_record"
+          }
+        ]
       }
     },
     {
@@ -141,15 +167,27 @@
         "organisation_number": "000000005",
         "claims": [],
         "evidence": [
-          {"id": "ev-duplicate"},
-          {"id": "ev-duplicate"}
+          {
+            "id": "ev-duplicate"
+          },
+          {
+            "id": "ev-duplicate"
+          }
         ]
       },
       "expected": {
         "valid": false,
         "envelopes_checked": 1,
         "citations_checked": 0,
-        "finding_codes": ["duplicate_evidence_id"]
+        "findings": [
+          {
+            "line": 1,
+            "organisation_number": "000000005",
+            "claim_index": null,
+            "evidence_id": "ev-duplicate",
+            "code": "duplicate_evidence_id"
+          }
+        ]
       }
     },
     {
@@ -161,7 +199,9 @@
             "field": "synthetic_label",
             "value": "alpha",
             "availability": "available",
-            "evidence_ids": ["ev-bad-metadata"]
+            "evidence_ids": [
+              "ev-bad-metadata"
+            ]
           }
         ],
         "evidence": [
@@ -178,10 +218,28 @@
         "valid": false,
         "envelopes_checked": 1,
         "citations_checked": 1,
-        "finding_codes": [
-          "invalid_content_sha256",
-          "invalid_source_url",
-          "retrieved_at_requires_timezone"
+        "findings": [
+          {
+            "line": 1,
+            "organisation_number": "000000006",
+            "claim_index": 0,
+            "evidence_id": "ev-bad-metadata",
+            "code": "invalid_content_sha256"
+          },
+          {
+            "line": 1,
+            "organisation_number": "000000006",
+            "claim_index": 0,
+            "evidence_id": "ev-bad-metadata",
+            "code": "invalid_source_url"
+          },
+          {
+            "line": 1,
+            "organisation_number": "000000006",
+            "claim_index": 0,
+            "evidence_id": "ev-bad-metadata",
+            "code": "retrieved_at_requires_timezone"
+          }
         ]
       }
     },
@@ -194,7 +252,9 @@
             "field": "synthetic_label",
             "value": "alpha",
             "availability": "available",
-            "evidence_ids": ["ev-escape"]
+            "evidence_ids": [
+              "ev-escape"
+            ]
           }
         ],
         "evidence": [
@@ -211,7 +271,15 @@
         "valid": false,
         "envelopes_checked": 1,
         "citations_checked": 1,
-        "finding_codes": ["snapshot_outside_root"]
+        "findings": [
+          {
+            "line": 1,
+            "organisation_number": "000000007",
+            "claim_index": 0,
+            "evidence_id": "ev-escape",
+            "code": "snapshot_outside_root"
+          }
+        ]
       }
     },
     {
@@ -223,7 +291,9 @@
             "field": "synthetic_label",
             "value": "alpha",
             "availability": "available",
-            "evidence_ids": ["ev-a"]
+            "evidence_ids": [
+              "ev-a"
+            ]
           }
         ],
         "evidence": [
@@ -240,7 +310,15 @@
         "valid": false,
         "envelopes_checked": 1,
         "citations_checked": 1,
-        "finding_codes": ["snapshot_hash_mismatch"]
+        "findings": [
+          {
+            "line": 1,
+            "organisation_number": "000000008",
+            "claim_index": 0,
+            "evidence_id": "ev-a",
+            "code": "snapshot_hash_mismatch"
+          }
+        ]
       }
     },
     {
@@ -250,7 +328,15 @@
         "valid": false,
         "envelopes_checked": 0,
         "citations_checked": 0,
-        "finding_codes": ["empty_input"]
+        "findings": [
+          {
+            "line": 0,
+            "organisation_number": null,
+            "claim_index": null,
+            "evidence_id": null,
+            "code": "empty_input"
+          }
+        ]
       }
     }
   ]

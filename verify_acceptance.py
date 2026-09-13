@@ -21,6 +21,14 @@ ROOT = Path(__file__).resolve().parent
 FIXTURE_ROOT = ROOT / "fixtures"
 MANIFEST_PATH = FIXTURE_ROOT / "manifest.json"
 VALIDATOR_ID = "signalpost_public_citation_v1"
+FINDING_FIELDS = {
+    "line",
+    "organisation_number",
+    "claim_index",
+    "evidence_id",
+    "code",
+    "message",
+}
 
 
 class AcceptanceFailure(Exception):
@@ -85,10 +93,47 @@ def check_report(case: dict[str, Any], report: Any) -> None:
         raise AcceptanceFailure(f"{case_id}: findings must be a list of objects")
     if findings != sorted(findings, key=finding_sort_key):
         raise AcceptanceFailure(f"{case_id}: findings are not in deterministic contract order")
-    codes = [finding.get("code") for finding in findings]
-    if codes != expected["finding_codes"]:
+    projections = []
+    for index, finding in enumerate(findings):
+        if set(finding) != FINDING_FIELDS:
+            raise AcceptanceFailure(
+                f"{case_id}: finding {index} must contain exactly {sorted(FINDING_FIELDS)!r}"
+            )
+        line = finding["line"]
+        organisation_number = finding["organisation_number"]
+        claim_index = finding["claim_index"]
+        evidence_id = finding["evidence_id"]
+        code = finding["code"]
+        message = finding["message"]
+        if type(line) is not int or line < 0:
+            raise AcceptanceFailure(f"{case_id}: finding {index} line must be a nonnegative integer")
+        if organisation_number is not None and not isinstance(organisation_number, str):
+            raise AcceptanceFailure(
+                f"{case_id}: finding {index} organisation_number must be a string or null"
+            )
+        if claim_index is not None and (type(claim_index) is not int or claim_index < 0):
+            raise AcceptanceFailure(
+                f"{case_id}: finding {index} claim_index must be a nonnegative integer or null"
+            )
+        if evidence_id is not None and not isinstance(evidence_id, str):
+            raise AcceptanceFailure(
+                f"{case_id}: finding {index} evidence_id must be a string or null"
+            )
+        if not isinstance(code, str) or not code:
+            raise AcceptanceFailure(f"{case_id}: finding {index} code must be a non-empty string")
+        if not isinstance(message, str) or not message:
+            raise AcceptanceFailure(f"{case_id}: finding {index} message must be a non-empty string")
+        projections.append({
+            "line": line,
+            "organisation_number": organisation_number,
+            "claim_index": claim_index,
+            "evidence_id": evidence_id,
+            "code": code,
+        })
+    if projections != expected["findings"]:
         raise AcceptanceFailure(
-            f"{case_id}: finding codes must be {expected['finding_codes']!r}, got {codes!r}"
+            f"{case_id}: finding locations and codes must be {expected['findings']!r}, "
+            f"got {projections!r}"
         )
 
 

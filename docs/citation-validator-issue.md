@@ -82,6 +82,8 @@ Write one deterministic JSON report. The report must contain:
 
 Sort findings by input line, claim index, evidence ID and code so repeated runs produce byte-for-byte equivalent JSON apart from optional trailing whitespace. Do not copy snapshot contents or claim values into the report.
 
+Every finding must contain exactly the six fields shown above. `line` is the one-based JSONL line number. Use `line: 0` only for an empty-input finding. Use `null` for `organisation_number` when there is no envelope, for `claim_index` when the finding applies to the envelope or evidence list, and for `evidence_id` when no evidence record is involved. `code` and `message` must be non-empty strings. For duplicate evidence IDs, include the duplicated ID and use a null claim index.
+
 `citations_checked` counts distinct evidence IDs cited by claims within each envelope, then sums those per-envelope counts. Reusing one evidence record for two claims in the same envelope counts once.
 
 The two `*_verified` fields must always be `false`. Passing this validator proves that a claim points to the captured bytes identified by its digest. It does not prove the factual claim or company identity.
