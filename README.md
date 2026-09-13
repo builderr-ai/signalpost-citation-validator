@@ -1,6 +1,6 @@
 # Signalpost citation validator
 
-An offline tool project that helps builders catch broken evidence references before submitting to the [Signalpost challenge](https://builderr.ai/challenges/signalpost).
+An offline tool project that helps builders catch broken evidence references before submitting to the [Signalpost challenge](https://builderr.ai/challenges/signalpost?utm_source=github&utm_medium=open_contribution&utm_campaign=signalpost_citation_validator).
 
 The first contribution is a citation validator. It checks whether a claim points to a captured source file and whether the file matches its recorded SHA-256 digest. It does **not** decide whether the claim is true, whether the source belongs to the correct company, whether collecting the source was permitted, or how a competition entry should score.
 

@@ -2,6 +2,8 @@
 
 Signalpost agents return company facts with links to supporting evidence. We need a small offline validator that catches broken evidence references before a result reaches evaluation.
 
+Challenge context: [build an agent that finds reliable public company information](https://builderr.ai/challenges/signalpost?utm_source=github&utm_medium=open_contribution&utm_campaign=signalpost_citation_validator).
+
 Implement a Python 3.11 citation validator for Signalpost result envelopes. It should check structure and captured bytes only. It must not crawl the web, decide whether a claim is true, decide whether a source belongs to the right company, or calculate a competition score.
 
 ### Input
@@ -116,3 +118,5 @@ Add focused tests for the function and CLI. The test command must run offline on
 This repository uses the MIT License. Contributors retain copyright and license submitted contributions under the same terms. No copyright assignment or contributor licence agreement is required. Do not copy code from participant submissions.
 
 There is no cash bounty for this pilot. A merged contribution does not affect Signalpost judging, prizes or leaderboard position. If Builderr later adds a bounty, that requires a separate written budget and updated issue terms before work begins.
+
+If you want to work on this, comment with the part you plan to implement before opening a pull request.
