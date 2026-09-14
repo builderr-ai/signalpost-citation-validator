@@ -186,6 +186,35 @@ class EvidenceMetadataTests(SnapshotTestCase):
         )
         self.assertEqual(["invalid_source_url"], self.codes(validate_envelope(envelope, self.root)))
 
+    def test_url_with_ascii_control_or_whitespace_is_rejected(self):
+        data = b"Metadata fixture.\n"
+        relative = self.write_snapshot("source.txt", data)
+        for url in (
+            "https://example.org/\nfoo",
+            "https://example.org/foo bar",
+            "https://example.org/foo\tbar",
+            "https://example.org/foo\rbar",
+            "https://example.org/\x00foo",
+            "https://example.org/foo\x7fbar",
+        ):
+            envelope = self.envelope(
+                [self.available_claim()], [self.evidence(relative, data, source_url=url)]
+            )
+            self.assertEqual(
+                ["invalid_source_url"],
+                self.codes(validate_envelope(envelope, self.root)),
+                url,
+            )
+
+    def test_percent_encoded_space_in_url_is_accepted(self):
+        data = b"Metadata fixture.\n"
+        relative = self.write_snapshot("source.txt", data)
+        envelope = self.envelope(
+            [self.available_claim()],
+            [self.evidence(relative, data, source_url="https://example.org/foo%20bar")],
+        )
+        self.assertTrue(validate_envelope(envelope, self.root).valid)
+
     def test_timezone_free_timestamp_is_rejected(self):
         data = b"Metadata fixture.\n"
         relative = self.write_snapshot("source.txt", data)
@@ -231,6 +260,16 @@ class PathSecurityTests(SnapshotTestCase):
             [self.evidence("missing.txt", b"unused", content_sha256=digest_of(b"unused"))],
         )
         self.assertEqual(["snapshot_missing"], self.codes(validate_envelope(envelope, self.root)))
+
+    def test_embedded_nul_in_snapshot_path_is_a_finding(self):
+        data = b"NUL path fixture.\n"
+        envelope = self.envelope(
+            [self.available_claim()],
+            [self.evidence("snap\x00shot.txt", data)],
+        )
+        result = validate_envelope(envelope, self.root)
+        self.assertEqual(["snapshot_path_invalid"], self.codes(result))
+        self.assertFalse(result.valid)
 
     def test_absolute_unix_snapshot_path_is_rejected(self):
         data = b"unused"
@@ -483,6 +522,23 @@ class LibraryApiTests(SnapshotTestCase):
     def test_library_rejects_non_dict_envelope(self):
         with self.assertRaises(TypeError):
             validate_envelope(["not", "a", "dict"], self.root)
+
+    def test_max_file_size_must_be_a_positive_integer(self):
+        data = b"Size type fixture.\n"
+        relative = self.write_snapshot("source.txt", data)
+        envelope = self.envelope([self.available_claim()], [self.evidence(relative, data)])
+        for bad in (0, -1):
+            with self.assertRaises(ValueError):
+                validate_envelope(envelope, self.root, max_file_size=bad)
+        for bad in (1.5, "20", None, True, False):
+            with self.assertRaises(TypeError):
+                validate_envelope(envelope, self.root, max_file_size=bad)
+        path = Path(self._temp.name) / "size.jsonl"
+        path.write_text(json.dumps(envelope) + "\n", encoding="utf-8")
+        with self.assertRaises(ValueError):
+            validate_input(path, self.root, max_file_size=0)
+        with self.assertRaises(TypeError):
+            validate_input(path, self.root, max_file_size=True)
 
 
 class NoNetworkTests(SnapshotTestCase):

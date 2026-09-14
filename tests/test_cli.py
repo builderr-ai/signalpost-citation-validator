@@ -114,6 +114,44 @@ class ExitCodeTests(CliHarness):
             self.run_cli("--input", "x.jsonl")
         self.assertEqual(2, context.exception.code)
 
+    def test_embedded_nul_snapshot_path_writes_report(self):
+        input_path = self.base / "nul.jsonl"
+        envelope = {
+            "organisation_number": "123456789",
+            "claims": [
+                {
+                    "field": "synthetic_field",
+                    "value": "synthetic-value",
+                    "availability": "available",
+                    "evidence_ids": ["ev-1"],
+                }
+            ],
+            "evidence": [
+                {
+                    "id": "ev-1",
+                    "source_url": "https://example.org/source",
+                    "retrieved_at": "2026-09-12T10:30:00Z",
+                    "content_sha256": "a" * 64,
+                    "snapshot_path": "snap\x00shot.txt",
+                }
+            ],
+        }
+        input_path.write_text(json.dumps(envelope) + "\n", encoding="utf-8")
+        output_path = self.base / "report.json"
+        status = self.run_cli(
+            "--input",
+            str(input_path),
+            "--snapshot-root",
+            str(self.root),
+            "--output",
+            str(output_path),
+        )
+        self.assertEqual(1, status)
+        self.assertTrue(output_path.is_file())
+        report = json.loads(output_path.read_text(encoding="utf-8"))
+        self.assertFalse(report["valid"])
+        self.assertIn("snapshot_path_invalid", [finding["code"] for finding in report["findings"]])
+
 
 class ModuleInvocationTests(CliHarness):
     def run_module(self, *args):

@@ -70,8 +70,34 @@ def _make_finding(
     }
 
 
+def _require_positive_int_max_file_size(max_file_size: Any) -> int:
+    """Return ``max_file_size`` after checking it is a positive integer.
+
+    ``bool`` is rejected even though it is an ``int`` subclass, so ``True``
+    cannot silently become a 1-byte limit. Invalid values raise ``TypeError``
+    or ``ValueError`` rather than producing undefined validation behaviour.
+    """
+    if isinstance(max_file_size, bool) or not isinstance(max_file_size, int):
+        raise TypeError("max_file_size must be a positive integer")
+    if max_file_size <= 0:
+        raise ValueError("max_file_size must be a positive integer")
+    return max_file_size
+
+
+def _contains_unsafe_url_characters(value: str) -> bool:
+    """Return True when ``value`` has characters a safe HTTP(S) URL cannot contain.
+
+    ASCII control characters (including NUL, newline, tab, CR), DEL and any
+    Unicode whitespace are rejected. Percent-encoded sequences such as ``%20``
+    remain allowed because they are printable ASCII.
+    """
+    return any(ord(ch) < 32 or ord(ch) == 127 or ch.isspace() for ch in value)
+
+
 def _is_http_url(value: Any) -> bool:
-    if not isinstance(value, str):
+    if not isinstance(value, str) or not value:
+        return False
+    if _contains_unsafe_url_characters(value):
         return False
     try:
         parts = urlsplit(value)
@@ -109,29 +135,39 @@ def _resolve_snapshot(snapshot_path: Any, root: Path) -> tuple[Path | None, str 
     Returns ``(resolved_path, None)`` when the path is usable, or
     ``(None, finding_code)`` when it must be rejected. A valid symlink that
     stays inside the root is accepted; any symlink resolving outside is not.
+    Embedded NUL bytes and other pathlib-invalid characters become a path
+    finding instead of aborting the run.
     """
     if not isinstance(snapshot_path, str) or not snapshot_path.strip():
         return None, "snapshot_path_invalid"
+    if "\x00" in snapshot_path:
+        return None, "snapshot_path_invalid"
 
-    posix = PurePosixPath(snapshot_path)
-    windows = PureWindowsPath(snapshot_path)
+    try:
+        posix = PurePosixPath(snapshot_path)
+        windows = PureWindowsPath(snapshot_path)
+        native = Path(snapshot_path)
+    except (ValueError, OSError):
+        return None, "snapshot_path_invalid"
+
     if (
         posix.is_absolute()
         or posix.root
         or windows.is_absolute()
         or windows.root
         or windows.drive
-        or Path(snapshot_path).is_absolute()
+        or native.is_absolute()
     ):
         return None, "snapshot_path_absolute"
 
     if ".." in posix.parts or ".." in windows.parts:
         return None, "snapshot_outside_root"
 
-    candidate = Path(snapshot_path)
     try:
         resolved_root = root.resolve()
-        target = (root / candidate).resolve()
+        target = (root / native).resolve()
+    except ValueError:
+        return None, "snapshot_path_invalid"
     except OSError:
         return None, "snapshot_outside_root"
     if target == resolved_root or not target.is_relative_to(resolved_root):
@@ -229,11 +265,14 @@ def validate_envelope(
     ``envelope`` must be a mapping as produced by ``json.loads`` on one JSONL
     line. ``snapshot_root`` is the directory holding the caller's captured
     source files. ``max_file_size`` bounds the size of each cited snapshot
-    file. ``line`` is the one-based JSONL line number used in findings.
+    file and must be a positive integer; ``bool`` values and non-integers
+    raise ``TypeError``, and zero or negative values raise ``ValueError``.
+    ``line`` is the one-based JSONL line number used in findings.
 
     Only evidence records cited by claims are validated in depth, and only
     cited snapshot files are read.
     """
+    max_file_size = _require_positive_int_max_file_size(max_file_size)
     if not isinstance(envelope, dict):
         raise TypeError("envelope must be a parsed JSON object (dict)")
 
@@ -341,7 +380,10 @@ def validate_input(
     number preserved; a malformed JSON line becomes a finding instead of
     aborting the run. An input with no envelopes is reported as a failed run
     through the ``empty_input`` finding, never as success.
+
+    ``max_file_size`` must be a positive integer; see ``validate_envelope``.
     """
+    max_file_size = _require_positive_int_max_file_size(max_file_size)
     findings: list[Finding] = []
     envelopes_checked = 0
     citations_checked = 0

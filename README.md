@@ -38,7 +38,7 @@ result = validate_envelope(envelope, "path/to/snapshot-root")
 report = validate_input("results.jsonl", "path/to/snapshot-root")
 ```
 
-`validate_envelope` accepts one parsed envelope, the snapshot root and an optional `max_file_size` keyword (default 20 MB per cited file). It returns the findings plus the number of distinct evidence IDs cited by the envelope's claims. `validate_input` reads a JSONL file line by line and returns the complete report.
+`validate_envelope` accepts one parsed envelope, the snapshot root and an optional `max_file_size` keyword (default 20 MB per cited file). `max_file_size` must be a positive integer; `bool` values and other non-integers raise `TypeError`, and zero or negative values raise `ValueError`. It returns the findings plus the number of distinct evidence IDs cited by the envelope's claims. `validate_input` reads a JSONL file line by line and returns the complete report.
 
 ### CLI
 
@@ -50,9 +50,9 @@ Exit codes: `0` when a report was written and validation found nothing, `1` when
 
 ### Behaviour and limits
 
-- **Offline only.** The validator makes no network requests. It never crawls `source_url`; the URL is only checked for syntax (must be `http` or `https` with no embedded credentials).
-- **Snapshot root required.** `snapshot_path` must be a relative path that resolves inside the supplied snapshot root and to a regular file. Absolute paths (POSIX or Windows style), `..` components and symlinks that resolve outside the root are rejected. Resolution always checks the final resolved path, never a string prefix. A symlink that stays inside the root is accepted.
-- **Size limit.** A cited snapshot file larger than the maximum (20 MB by default, configurable with `max_file_size`) is rejected.
+- **Offline only.** The validator makes no network requests. It never crawls `source_url`; the URL is only checked for syntax (must be `http` or `https` with no embedded credentials, ASCII control characters or whitespace).
+- **Snapshot root required.** `snapshot_path` must be a relative path that resolves inside the supplied snapshot root and to a regular file. Absolute paths (POSIX or Windows style), `..` components, embedded NUL bytes and symlinks that resolve outside the root are rejected. An invalid path is reported as a finding; it does not abort the run. Resolution always checks the final resolved path, never a string prefix. A symlink that stays inside the root is accepted.
+- **Size limit.** A cited snapshot file larger than the maximum (20 MB by default, configurable with `max_file_size`) is rejected. The library requires `max_file_size` to be a positive integer.
 - **Only cited files are read.** The SHA-256 digest of each cited snapshot's bytes is compared with `content_sha256`. Uncited files are never opened.
 - **Deterministic.** Findings are sorted by input line, claim index, evidence ID and code, and never contain snapshot contents or claim values. Repeating the same run produces byte-identical JSON apart from trailing whitespace.
 - **Empty input fails.** A JSONL file with no envelopes is reported as a failed run (`empty_input`, `valid: false`), never as success. A malformed JSON line becomes a finding and does not abort the run.
