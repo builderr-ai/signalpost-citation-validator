@@ -152,6 +152,51 @@ class ExitCodeTests(CliHarness):
         self.assertFalse(report["valid"])
         self.assertIn("snapshot_path_invalid", [finding["code"] for finding in report["findings"]])
 
+    def test_symlink_loop_snapshot_path_writes_report(self):
+        try:
+            probe = self.root / "symlink-probe"
+            probe.symlink_to(self.root / "keep.txt")
+        except (OSError, NotImplementedError):
+            self.skipTest("symlinks are not available on this account or platform")
+        (self.root / "loop-a").symlink_to(self.root / "loop-b")
+        (self.root / "loop-b").symlink_to(self.root / "loop-a")
+        input_path = self.base / "loop.jsonl"
+        envelope = {
+            "organisation_number": "123456789",
+            "claims": [
+                {
+                    "field": "synthetic_field",
+                    "value": "synthetic-value",
+                    "availability": "available",
+                    "evidence_ids": ["ev-1"],
+                }
+            ],
+            "evidence": [
+                {
+                    "id": "ev-1",
+                    "source_url": "https://example.org/source",
+                    "retrieved_at": "2026-09-12T10:30:00Z",
+                    "content_sha256": "a" * 64,
+                    "snapshot_path": "loop-a",
+                }
+            ],
+        }
+        input_path.write_text(json.dumps(envelope) + "\n", encoding="utf-8")
+        output_path = self.base / "report.json"
+        status = self.run_cli(
+            "--input",
+            str(input_path),
+            "--snapshot-root",
+            str(self.root),
+            "--output",
+            str(output_path),
+        )
+        self.assertEqual(1, status)
+        self.assertTrue(output_path.is_file())
+        report = json.loads(output_path.read_text(encoding="utf-8"))
+        self.assertFalse(report["valid"])
+        self.assertIn("snapshot_outside_root", [finding["code"] for finding in report["findings"]])
+
 
 class ModuleInvocationTests(CliHarness):
     def run_module(self, *args):

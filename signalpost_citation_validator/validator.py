@@ -101,13 +101,20 @@ def _is_http_url(value: Any) -> bool:
         return False
     try:
         parts = urlsplit(value)
-    except ValueError:
+        # Access hostname/userinfo/port inside the try: invalid IPv6, a
+        # non-integer port and a port outside 0-65535 raise ValueError on
+        # the attribute, not on urlsplit() itself.
+        hostname = parts.hostname
+        username = parts.username
+        password = parts.password
+        _ = parts.port
+    except (ValueError, UnicodeError):
         return False
-    if parts.scheme not in ("http", "https"):
+    if parts.scheme.lower() not in ("http", "https"):
         return False
-    if not parts.hostname:
+    if not hostname:
         return False
-    if parts.username is not None or parts.password is not None:
+    if username is not None or password is not None:
         return False
     return True
 
@@ -118,7 +125,7 @@ def _retrieved_at_code(value: Any) -> str | None:
         return "invalid_retrieved_at"
     try:
         parsed = datetime.fromisoformat(value)
-    except ValueError:
+    except (ValueError, OverflowError, TypeError):
         return "invalid_retrieved_at"
     if parsed.tzinfo is None or parsed.utcoffset() is None:
         return "retrieved_at_requires_timezone"
@@ -168,7 +175,9 @@ def _resolve_snapshot(snapshot_path: Any, root: Path) -> tuple[Path | None, str 
         target = (root / native).resolve()
     except ValueError:
         return None, "snapshot_path_invalid"
-    except OSError:
+    except (OSError, RuntimeError):
+        # RuntimeError is raised for symlink loops; treat it like other
+        # resolve failures: the path cannot be shown to stay inside the root.
         return None, "snapshot_outside_root"
     if target == resolved_root or not target.is_relative_to(resolved_root):
         return None, "snapshot_outside_root"
@@ -225,24 +234,21 @@ def _validate_cited_evidence(
         problems.append(("snapshot_outside_root", "snapshot_path must resolve inside the snapshot root"))
 
     if target is not None and path_code is None:
-        if not target.exists():
-            problems.append(("snapshot_missing", "snapshot_path does not resolve to an existing file"))
-        elif not target.is_file():
-            problems.append(("snapshot_not_regular_file", "snapshot_path must resolve to a regular file"))
-        else:
-            size = target.stat().st_size
-            if size > max_file_size:
-                problems.append(
-                    ("snapshot_too_large", "snapshot file is larger than the configured maximum size")
-                )
+        try:
+            if not target.exists():
+                problems.append(("snapshot_missing", "snapshot_path does not resolve to an existing file"))
+            elif not target.is_file():
+                problems.append(("snapshot_not_regular_file", "snapshot_path must resolve to a regular file"))
             else:
-                recorded = evidence.get("content_sha256")
-                if _is_sha256_hex(recorded):
-                    try:
+                size = target.stat().st_size
+                if size > max_file_size:
+                    problems.append(
+                        ("snapshot_too_large", "snapshot file is larger than the configured maximum size")
+                    )
+                else:
+                    recorded = evidence.get("content_sha256")
+                    if _is_sha256_hex(recorded):
                         digest = hashlib.sha256(target.read_bytes()).hexdigest()
-                    except OSError:
-                        problems.append(("snapshot_unreadable", "snapshot file could not be read"))
-                    else:
                         if digest != recorded.lower():
                             problems.append(
                                 (
@@ -250,6 +256,8 @@ def _validate_cited_evidence(
                                     "Captured bytes do not match content_sha256",
                                 )
                             )
+        except OSError:
+            problems.append(("snapshot_unreadable", "snapshot file could not be read"))
     return problems
 
 

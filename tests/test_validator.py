@@ -215,6 +215,32 @@ class EvidenceMetadataTests(SnapshotTestCase):
         )
         self.assertTrue(validate_envelope(envelope, self.root).valid)
 
+    def test_url_with_invalid_port_is_rejected(self):
+        data = b"Metadata fixture.\n"
+        relative = self.write_snapshot("source.txt", data)
+        for url in (
+            "https://example.org:abc/source",
+            "https://example.org:65536/source",
+            "https://example.org:80x/source",
+        ):
+            envelope = self.envelope(
+                [self.available_claim()], [self.evidence(relative, data, source_url=url)]
+            )
+            self.assertEqual(
+                ["invalid_source_url"],
+                self.codes(validate_envelope(envelope, self.root)),
+                url,
+            )
+
+    def test_url_with_valid_port_is_accepted(self):
+        data = b"Metadata fixture.\n"
+        relative = self.write_snapshot("source.txt", data)
+        envelope = self.envelope(
+            [self.available_claim()],
+            [self.evidence(relative, data, source_url="https://example.org:443/source")],
+        )
+        self.assertTrue(validate_envelope(envelope, self.root).valid)
+
     def test_timezone_free_timestamp_is_rejected(self):
         data = b"Metadata fixture.\n"
         relative = self.write_snapshot("source.txt", data)
@@ -340,6 +366,19 @@ class PathSecurityTests(SnapshotTestCase):
         )
         self.assertTrue(validate_envelope(envelope, self.root).valid)
 
+    def test_symlink_loop_is_a_finding(self):
+        data = b"Loop fixture.\n"
+        if not self._symlinks_supported():
+            self.skipTest("symlinks are not available on this account or platform")
+        (self.root / "loop-a").symlink_to(self.root / "loop-b")
+        (self.root / "loop-b").symlink_to(self.root / "loop-a")
+        envelope = self.envelope(
+            [self.available_claim()], [self.evidence("loop-a", data)]
+        )
+        result = validate_envelope(envelope, self.root)
+        self.assertEqual(["snapshot_outside_root"], self.codes(result))
+        self.assertFalse(result.valid)
+
     def test_oversized_snapshot_is_rejected(self):
         data = b"0123456789"
         relative = self.write_snapshot("big.txt", data)
@@ -350,6 +389,18 @@ class PathSecurityTests(SnapshotTestCase):
         self.assertEqual(["snapshot_too_large"], self.codes(result))
         # The same envelope passes with the default limit.
         self.assertTrue(validate_envelope(envelope, self.root).valid)
+
+    def test_snapshot_at_exact_size_limit_is_accepted(self):
+        data = b"1234"
+        relative = self.write_snapshot("exact.txt", data)
+        envelope = self.envelope(
+            [self.available_claim()], [self.evidence(relative, data)]
+        )
+        self.assertTrue(validate_envelope(envelope, self.root, max_file_size=4).valid)
+        self.assertEqual(
+            ["snapshot_too_large"],
+            self.codes(validate_envelope(envelope, self.root, max_file_size=3)),
+        )
 
     def test_default_maximum_is_twenty_megabytes(self):
         self.assertEqual(20 * 1024 * 1024, DEFAULT_MAX_FILE_SIZE_BYTES)
